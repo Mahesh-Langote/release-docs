@@ -136,17 +136,18 @@ runs:
   steps:  
     - name: Setup Environment
       shell: bash
-      run: |
-        echo "🚀 Smart Release Documentation Generator"
+      run: |        echo "🚀 Smart Release Documentation Generator"
         echo "Setting up environment variables..."
-          # Set default values
+        
+        # Set default values
         echo "VERSION_FILE=${{ inputs.version-file }}" >> $GITHUB_ENV
         echo "VERSION_PATTERN=${{ inputs.version-pattern }}" >> $GITHUB_ENV
         echo "FALLBACK_VERSION_FORMAT=${{ inputs.fallback-version-format }}" >> $GITHUB_ENV
         echo "COMMIT_RANGE=${{ inputs.commit-range }}" >> $GITHUB_ENV
         echo "MAX_COMMITS=${{ inputs.max-commits }}" >> $GITHUB_ENV
         echo "TICKET_PATTERN=${{ inputs.ticket-pattern }}" >> $GITHUB_ENV
-        echo "TICKET_BASE_URL=${{ inputs.ticket-base-url }}" >> $GITHUB_ENV        echo "ENABLE_CATEGORIES=${{ inputs.enable-categories }}" >> $GITHUB_ENV
+        echo "TICKET_BASE_URL=${{ inputs.ticket-base-url }}" >> $GITHUB_ENV
+        echo "ENABLE_CATEGORIES=${{ inputs.enable-categories }}" >> $GITHUB_ENV
         echo "OUTPUT_FORMAT=${{ inputs.output-format }}" >> $GITHUB_ENV
         echo "INCLUDE_SUMMARY=${{ inputs.include-summary }}" >> $GITHUB_ENV
         echo "CREATE_TAG=${{ inputs.create-tag }}" >> $GITHUB_ENV
@@ -188,9 +189,10 @@ runs:
 
     - name: Extract Version
       shell: bash
-      run: |
-        echo "📋 Extracting version from $VERSION_FILE..."
-        VERSION=""        if [ -f "$VERSION_FILE" ]; then
+      run: |        echo "📋 Extracting version from $VERSION_FILE..."
+        VERSION=""
+        
+        if [ -f "$VERSION_FILE" ]; then
           if [[ "$VERSION_FILE" == *.json ]]; then
             # Handle package.json
             VERSION=$(grep -m1 '"version"' "$VERSION_FILE" | sed 's/.*"version":\s*"\([^"]*\)".*/\1/' 2>/dev/null || echo "")
@@ -241,7 +243,9 @@ runs:
         echo "COMMITTER_NAME=$(git log -1 --pretty=%an)" >> $GITHUB_ENV
         echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-        echo "✅ Git configuration completed"    - name: Generate Release Notes
+        echo "✅ Git configuration completed"
+
+    - name: Generate Release Notes
       shell: bash
       run: |
         echo "📝 Generating release notes..."
@@ -260,9 +264,10 @@ runs:
         # Source the release notes generation script
         source "${{ github.action_path }}/scripts/generate-release-notes.sh"
         
-        echo "✅ Script sourced, calling function..."
-        # Call the main function
-        generate_release_notes    - name: Convert to Confluence Format
+        echo "✅ Script sourced, calling function..."        # Call the main function
+        generate_release_notes
+
+    - name: Convert to Confluence Format
       if: env.CONFLUENCE_ENABLED == 'true' || env.OUTPUT_FORMAT == 'confluence' || env.OUTPUT_FORMAT == 'both'
       shell: bash
       run: |
@@ -313,7 +318,8 @@ runs:
 
           ${{ env.RELEASE_HIGHLIGHTS }}
 
-          ${{ env.CONFLUENCE_URL && format('*📖 Release Notes:* {0}', env.CONFLUENCE_URL) || '' }}        SLACK_TITLE: ${{ env.PROJECT_NAME }} - New Release Available
+          ${{ env.CONFLUENCE_URL && format('*📖 Release Notes:* {0}', env.CONFLUENCE_URL) || '' }}
+        SLACK_TITLE: ${{ env.PROJECT_NAME }} - New Release Available
         SLACK_USERNAME: ${{ env.APP_SHORT_NAME }} Release Bot
 
     - name: Set Outputs
