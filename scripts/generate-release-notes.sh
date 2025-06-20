@@ -16,8 +16,8 @@ generate_release_notes() {
     
     # Determine commit range
     determine_commit_range() {
-        if [ -n "${{ inputs.commit-range }}" ]; then
-            commit_range="${{ inputs.commit-range }}"
+        if [ -n "$COMMIT_RANGE" ]; then
+            commit_range="$COMMIT_RANGE"
             echo "📌 Using provided commit range: $commit_range"
         else
             echo "🔍 Auto-detecting commit range..."

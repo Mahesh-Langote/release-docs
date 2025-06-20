@@ -1,0 +1,46 @@
+name: Test Release Docs - Debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug-test:
+    runs-on: ubuntu-latest
+    name: Debug Test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Create simple test version file
+        run: |
+          echo 'version: 1.0.0' > pubspec.yaml
+          
+      - name: List action files
+        run: |
+          echo "📁 Action structure:"
+          find . -type f -name "*.yml" -o -name "*.sh" | head -20
+          echo "📁 Scripts directory:"
+          ls -la scripts/
+          
+      - name: Test Action - Minimal
+        uses: ./
+        id: test-action
+        with:
+          version-file: 'pubspec.yaml'
+          project-name: 'Debug Test'
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+          
+      - name: Check Outputs
+        run: |
+          echo "🔍 Action outputs:"
+          echo "Version: ${{ steps.test-action.outputs.release-version }}"
+          echo "Total commits: ${{ steps.test-action.outputs.total-commits }}"
+          echo "Release notes path: ${{ steps.test-action.outputs.release-notes-path }}"
+          
+          echo "📁 Generated files:"
+          find release-notes -type f 2>/dev/null || echo "No release-notes directory found"
