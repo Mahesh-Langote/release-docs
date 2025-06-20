@@ -1,0 +1,76 @@
+{
+  "name": "release-docs",
+  "version": "1.0.0",
+  "description": "A comprehensive GitHub Action for automated release documentation with JIRA integration, Confluence publishing, and Slack notifications",
+  "main": "action.yml",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "shellcheck scripts/*.sh",
+    "validate": "yamllint action.yml",
+    "package": "npm run lint && npm run validate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/release-docs.git"
+  },
+  "keywords": [
+    "github-action",
+    "release-notes",
+    "documentation",
+    "jira",
+    "confluence",
+    "slack",
+    "automation",
+    "ci-cd",
+    "mobile",
+    "flutter",
+    "react-native",
+    "nodejs",
+    "release-management"
+  ],  "author": "Release Automation Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-org/release-docs/issues"
+  },
+  "homepage": "https://github.com/your-org/release-docs#readme",
+  "devDependencies": {
+    "shellcheck": "^0.8.0",
+    "yamllint": "^1.26.0"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "files": [
+    "action.yml",
+    "scripts/",
+    "examples/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "actionMetadata": {
+    "branding": {
+      "icon": "file-text",
+      "color": "blue"
+    },
+    "marketplace": {
+      "categories": [
+        "continuous-integration",
+        "deployment",
+        "publishing",
+        "utilities"
+      ],
+      "tags": [
+        "release-notes",
+        "documentation",
+        "automation",
+        "jira",
+        "confluence",
+        "slack",
+        "mobile",
+        "flutter",
+        "react-native"
+      ]
+    }
+  }
+}

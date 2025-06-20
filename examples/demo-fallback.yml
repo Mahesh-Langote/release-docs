@@ -1,0 +1,95 @@
+name: Release Documentation with Fallback Demo
+
+on:
+  workflow_dispatch:
+    inputs:
+      demo_type:
+        description: 'Demo scenario to run'
+        required: true
+        default: 'version-fallback'
+        type: choice
+        options:
+          - version-fallback
+          - custom-format
+          - normal-version
+
+jobs:
+  demo-version-fallback:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.demo_type == 'version-fallback'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Demo - Version File Missing
+        uses: ./
+        with:
+          version-file: 'missing-file.yaml'  # This file doesn't exist
+          project-name: 'Demo App with Fallback'
+          app-short-name: 'DemoApp'
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+          
+      - name: Show Generated Release Notes
+        run: |
+          echo "📄 Generated release notes files:"
+          ls -la release-notes/
+          echo ""
+          echo "📝 Content preview:"
+          head -20 release-notes/*.md
+
+  demo-custom-format:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.demo_type == 'custom-format'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Demo - Custom Date Format
+        uses: ./
+        with:
+          version-file: 'missing-file.yaml'  # This file doesn't exist
+          fallback-version-format: '%Y%m%d-%H%M%S'  # Custom format: YYYYMMDD-HHMMSS
+          project-name: 'Demo App with Custom Format'
+          create-tag: true
+          tag-prefix: 'demo-'
+          confluence-enabled: false
+          slack-enabled: false
+          
+      - name: Show Generated Version and Tag
+        run: |
+          echo "🏷️ Generated tags:"
+          git tag -l "demo-*"
+          echo ""
+          echo "📄 Generated release notes:"
+          ls -la release-notes/
+          
+  demo-normal-version:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.demo_type == 'normal-version'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Create Demo Version File
+        run: |
+          echo 'version: 1.2.3' > demo_pubspec.yaml
+          
+      - name: Demo - Normal Version Extraction
+        uses: ./
+        with:
+          version-file: 'demo_pubspec.yaml'  # This file exists
+          project-name: 'Demo App with Version File'
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+          
+      - name: Compare with Fallback
+        run: |
+          echo "✅ Normal version extraction worked!"
+          echo "📝 Generated file:"
+          cat release-notes/release-notes-v1.2.3.md

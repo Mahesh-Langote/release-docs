@@ -1,0 +1,412 @@
+name: Test Release Docs Action
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: "Test scenario to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - basic
+          - confluence
+          - slack
+          - tagging
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint Scripts
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Lint Bash Scripts
+        run: |
+          echo "🔍 Linting bash scripts..."
+          find scripts -name "*.sh" -exec shellcheck {} \;
+          echo "✅ Shellcheck completed"
+
+      - name: Validate action.yml
+        run: |
+          echo "🔍 Validating action.yml..."
+          # Basic YAML validation
+          python3 -c "import yaml; yaml.safe_load(open('action.yml'))"
+          echo "✅ action.yml is valid"
+
+  test-basic:
+    runs-on: ubuntu-latest
+    name: Test Basic Functionality
+    if: ${{ github.event.inputs.test_scenario == 'all' || github.event.inputs.test_scenario == 'basic' || github.event.inputs.test_scenario == '' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create test version file
+        run: |
+          echo 'version: 1.2.3+build.123' > test_pubspec.yaml
+          echo '{"version": "2.1.0"}' > test_package.json
+
+      - name: Test Action - Basic Flutter
+        uses: ./
+        with:
+          version-file: "test_pubspec.yaml"
+          project-name: "Test Flutter App"
+          app-short-name: "TestApp"
+          ticket-pattern: "TEST-[0-9]+"
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+
+      - name: Verify Output Files
+        run: |
+          echo "🔍 Checking generated files..."
+          if [ -f "release-notes/release-notes-v1.2.3.md" ]; then
+            echo "✅ Release notes generated"
+            cat "release-notes/release-notes-v1.2.3.md"
+          else
+            echo "❌ Release notes not found"
+            exit 1
+          fi
+
+      - name: Test Action - Basic Node.js
+        uses: ./
+        with:
+          version-file: "test_package.json"
+          project-name: "Test Node.js App"
+          ticket-pattern: "NODE-[0-9]+"
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+
+  test-with-confluence:
+    runs-on: ubuntu-latest
+    name: Test Confluence Integration
+    if: ${{ github.event.inputs.test_scenario == 'all' || github.event.inputs.test_scenario == 'confluence' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create test version file
+        run: |
+          echo '{"version": "1.5.0"}' > package.json
+
+      - name: Test Action with Mock Confluence
+        uses: ./
+        with:
+          version-file: "package.json"
+          project-name: "Test App with Confluence"
+          confluence-enabled: true
+          confluence-base-url: "https://test.atlassian.net/wiki"
+          confluence-email: "test@example.com"
+          confluence-api-token: "mock-token"
+          confluence-space-key: "TEST"
+          create-tag: false
+          slack-enabled: false
+        continue-on-error: true # Expected to fail with mock credentials
+
+      - name: Verify Confluence Conversion
+        run: |
+          echo "🔍 Checking Confluence conversion..."
+          if [ -f "release-notes/confluence-release-notes-v1.5.0.txt" ]; then
+            echo "✅ Confluence format generated"
+            head -20 "release-notes/confluence-release-notes-v1.5.0.txt"
+          else
+            echo "❌ Confluence format not found"
+            exit 1
+          fi
+
+  test-tagging:
+    runs-on: ubuntu-latest
+    name: Test Git Tagging
+    if: ${{ github.event.inputs.test_scenario == 'all' || github.event.inputs.test_scenario == 'tagging' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config --global user.email "test@example.com"
+          git config --global user.name "Test User"
+
+      - name: Create test version file
+        run: |
+          echo 'version: 2.0.0' > pubspec.yaml
+
+      - name: Test Action with Tagging
+        uses: ./
+        with:
+          version-file: "pubspec.yaml"
+          project-name: "Test App with Tagging"
+          create-tag: true
+          tag-prefix: "test-v"
+          tag-suffix: "-ci"
+          confluence-enabled: false
+          slack-enabled: false
+
+      - name: Verify Tag Creation
+        run: |
+          echo "🔍 Checking created tags..."
+          git tag -l "test-v*"
+          if git tag -l | grep -q "test-v2.0.0-ci"; then
+            echo "✅ Tag created successfully"
+            git show --name-only test-v2.0.0-ci
+          else
+            echo "❌ Tag not created"
+            exit 1
+          fi
+
+  test-categorization:
+    runs-on: ubuntu-latest
+    name: Test Commit Categorization
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create test commits
+        run: |
+          git config --global user.email "test@example.com"
+          git config --global user.name "Test User"
+
+          # Create test commits with different types
+          echo "test" > test1.txt
+          git add test1.txt
+          git commit -m "feat: add new feature TEST-123"
+
+          echo "test2" > test2.txt
+          git add test2.txt
+          git commit -m "fix: resolve bug issue TEST-124"
+
+          echo "test3" > test3.txt
+          git add test3.txt
+          git commit -m "docs: update documentation"
+
+      - name: Create test version file
+        run: |
+          echo '{"version": "1.1.0"}' > package.json
+
+      - name: Test Action with Custom Categories
+        uses: ./
+        with:
+          version-file: "package.json"
+          project-name: "Test Categorization"
+          enable-categories: true
+          category-config: |
+            {
+              "features": {
+                "keywords": ["feat", "feature"],
+                "emoji": "🚀",
+                "title": "New Features",
+                "max_entries": 10
+              },
+              "bugs": {
+                "keywords": ["fix", "bug"],
+                "emoji": "🐛",
+                "title": "Bug Fixes",
+                "max_entries": 10
+              }
+            }
+          ticket-pattern: "TEST-[0-9]+"
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+
+      - name: Verify Categorization
+        run: |
+          echo "🔍 Checking categorization..."
+          if [ -f "release-notes/release-notes-v1.1.0.md" ]; then
+            echo "✅ Release notes with categories generated"
+            cat "release-notes/release-notes-v1.1.0.md"
+            
+            # Check for specific categories
+            if grep -q "New Features" "release-notes/release-notes-v1.1.0.md"; then
+              echo "✅ Features category found"
+            fi
+            
+            if grep -q "Bug Fixes" "release-notes/release-notes-v1.1.0.md"; then
+              echo "✅ Bug fixes category found"
+            fi
+            
+            if grep -q "TEST-123" "release-notes/release-notes-v1.1.0.md"; then
+              echo "✅ Ticket links generated"
+            fi
+          else
+            echo "❌ Categorized release notes not found"
+            exit 1
+          fi
+  test-error-handling:
+    runs-on: ubuntu-latest
+    name: Test Error Handling
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Test Missing Version File (Date Fallback)
+        uses: ./
+        with:
+          version-file: "nonexistent.yaml"
+          project-name: "Test Date Fallback"
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+        id: date-fallback
+
+      - name: Verify Date Fallback Works
+        run: |
+          echo "🔍 Checking date-based version fallback..."
+          echo "Generated Version: ${{ steps.date-fallback.outputs.release-version }}"
+
+          # Verify the version follows date format (YYYY.MM.DD.HHMM)
+          if [[ "${{ steps.date-fallback.outputs.release-version }}" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{4}$ ]]; then
+            echo "✅ Date-based version format is correct"
+          else
+            echo "❌ Date-based version format is incorrect: ${{ steps.date-fallback.outputs.release-version }}"
+            exit 1
+          fi
+
+          # Check if release notes were generated with date-based version
+          if [ -f "release-notes/release-notes-v${{ steps.date-fallback.outputs.release-version }}.md" ]; then
+            echo "✅ Release notes generated with date-based version"
+            cat "release-notes/release-notes-v${{ steps.date-fallback.outputs.release-version }}.md"
+          else
+            echo "❌ Release notes not found with date-based version"
+            exit 1
+          fi
+
+      - name: Test Custom Date Format
+        uses: ./
+        with:
+          version-file: "nonexistent.yaml"
+          project-name: "Test Custom Date Format"
+          fallback-version-format: "%Y%m%d-%H%M%S"
+          create-tag: false
+          confluence-enabled: false
+          slack-enabled: false
+        id: custom-format
+
+      - name: Verify Custom Date Format
+        run: |
+          echo "🔍 Checking custom date format..."
+          echo "Generated Version: ${{ steps.custom-format.outputs.release-version }}"
+
+          # Verify the version follows custom format (YYYYMMDD-HHMMSS)
+          if [[ "${{ steps.custom-format.outputs.release-version }}" =~ ^[0-9]{8}-[0-9]{6}$ ]]; then
+            echo "✅ Custom date format is correct"
+          else
+            echo "❌ Custom date format is incorrect: ${{ steps.custom-format.outputs.release-version }}"
+            exit 1
+          fi
+
+  test-outputs:
+    runs-on: ubuntu-latest
+    name: Test Action Outputs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create test version file
+        run: |
+          echo 'version: 3.0.0' > pubspec.yaml
+
+      - name: Test Action Outputs
+        uses: ./
+        id: release-action
+        with:
+          version-file: "pubspec.yaml"
+          project-name: "Test Outputs"
+          create-tag: true
+          tag-prefix: "output-test-"
+          confluence-enabled: false
+          slack-enabled: false
+
+      - name: Verify Outputs
+        run: |
+          echo "🔍 Checking action outputs..."
+          echo "Release Version: ${{ steps.release-action.outputs.release-version }}"
+          echo "Total Commits: ${{ steps.release-action.outputs.total-commits }}"
+          echo "Tag Name: ${{ steps.release-action.outputs.tag-name }}"
+          echo "Tag Created: ${{ steps.release-action.outputs.tag-created }}"
+          echo "Release Notes Path: ${{ steps.release-action.outputs.release-notes-path }}"
+
+          # Verify outputs are not empty
+          if [ -z "${{ steps.release-action.outputs.release-version }}" ]; then
+            echo "❌ Release version output is empty"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.release-action.outputs.total-commits }}" ]; then
+            echo "❌ Total commits output is empty"
+            exit 1
+          fi
+
+          echo "✅ All outputs are properly set"
+
+  summary:
+    runs-on: ubuntu-latest
+    name: Test Summary
+    needs:
+      [
+        lint,
+        test-basic,
+        test-with-confluence,
+        test-tagging,
+        test-categorization,
+        test-error-handling,
+        test-outputs,
+      ]
+    if: always()
+
+    steps:
+      - name: Test Results Summary
+        run: |
+          echo "## 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Basic Functionality | ${{ needs.test-basic.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Confluence Integration | ${{ needs.test-with-confluence.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Git Tagging | ${{ needs.test-tagging.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit Categorization | ${{ needs.test-categorization.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Error Handling & Date Fallback | ${{ needs.test-error-handling.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Action Outputs | ${{ needs.test-outputs.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Version file extraction (pubspec.yaml, package.json)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Commit analysis and ticket detection" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Release notes generation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Confluence format conversion" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Git tagging functionality" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Commit categorization" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Error handling & date-time fallback" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Action outputs" >> $GITHUB_STEP_SUMMARY
