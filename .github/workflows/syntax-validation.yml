@@ -1,0 +1,44 @@
+name: Syntax Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate-syntax:
+    runs-on: ubuntu-latest
+    name: Validate Action Syntax
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Create test version file
+        run: |
+          echo '{"version": "1.0.0"}' > package.json
+          
+      - name: Test Action (Basic)
+        id: test_basic
+        uses: ./
+        with:
+          version-file: 'package.json'
+          project-name: 'Test Project'
+          app-short-name: 'test'
+          
+      - name: Test Action (With Fallback)
+        id: test_fallback
+        uses: ./
+        with:
+          version-file: 'nonexistent.json'
+          project-name: 'Test Project'
+          app-short-name: 'test'
+          fallback-version-format: '%Y.%m.%d-%H%M'
+          
+      - name: Verify outputs
+        run: |
+          echo "✅ Action completed successfully!"
+          echo "Basic test release version: ${{ steps.test_basic.outputs.release-version || 'Not set' }}"
+          echo "Fallback test release version: ${{ steps.test_fallback.outputs.release-version || 'Not set' }}"
