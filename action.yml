@@ -1,137 +1,137 @@
-name: 'Release Docs'
-description: 'Automatically generate comprehensive release documentation with JIRA integration, Confluence publishing, Slack notifications, and smart version fallback when version files are missing'
-author: 'Release Automation Team'
+name: "Release Docs"
+description: "Automatically generate comprehensive release documentation with JIRA integration, Confluence publishing, Slack notifications, and smart version fallback when version files are missing"
+author: "Release Automation Team"
 
 branding:
-  icon: 'file-text'
-  color: 'blue'
+  icon: "file-text"
+  color: "blue"
 
-inputs:  # Version Configuration
+inputs: # Version Configuration
   version-file:
-    description: 'Path to version file (pubspec.yaml, package.json, etc.). If file doesn''t exist or version cannot be extracted, falls back to date-time version'
+    description: "Path to version file (pubspec.yaml, package.json, etc.). If file doesn't exist or version cannot be extracted, falls back to date-time version"
     required: false
-    default: 'pubspec.yaml'
+    default: "pubspec.yaml"
   version-pattern:
-    description: 'Regex pattern to extract version from file'
+    description: "Regex pattern to extract version from file"
     required: false
     default: 'version:\s*(.+)'
   fallback-version-format:
-    description: 'Date format for fallback version when version file is missing (default: YYYY.MM.DD.HHMM)'
+    description: "Date format for fallback version when version file is missing (default: YYYY.MM.DD.HHMM)"
     required: false
-    default: '%Y.%m.%d.%H%M'
+    default: "%Y.%m.%d.%H%M"
 
   # Git Configuration
   commit-range:
-    description: 'Git commit range for release notes (auto-detected if not provided)'
+    description: "Git commit range for release notes (auto-detected if not provided)"
     required: false
   max-commits:
-    description: 'Maximum number of commits to analyze'
+    description: "Maximum number of commits to analyze"
     required: false
-    default: '100'
+    default: "100"
 
   # Ticket Integration
   ticket-pattern:
     description: 'Regex pattern for ticket detection (e.g., JIRA-\\d+, MDO-\\d+)'
     required: false
-    default: 'MDO-[0-9]+'
+    default: "MDO-[0-9]+"
   ticket-base-url:
-    description: 'Base URL for ticket links (e.g., https://company.atlassian.net/browse/)'
+    description: "Base URL for ticket links (e.g., https://company.atlassian.net/browse/)"
     required: false
-    default: 'https://musterdekho.atlassian.net/browse/'
+    default: "https://musterdekho.atlassian.net/browse/"
 
   # Release Categories
   enable-categories:
-    description: 'Enable automatic categorization of commits'
+    description: "Enable automatic categorization of commits"
     required: false
-    default: 'true'
+    default: "true"
   category-config:
-    description: 'JSON configuration for commit categories'
+    description: "JSON configuration for commit categories"
     required: false
 
   # Confluence Integration
   confluence-enabled:
-    description: 'Enable Confluence integration'
+    description: "Enable Confluence integration"
     required: false
-    default: 'false'
+    default: "false"
   confluence-base-url:
-    description: 'Confluence base URL'
+    description: "Confluence base URL"
     required: false
   confluence-email:
-    description: 'Confluence user email'
+    description: "Confluence user email"
     required: false
   confluence-api-token:
-    description: 'Confluence API token'
+    description: "Confluence API token"
     required: false
   confluence-space-key:
-    description: 'Confluence space key'
+    description: "Confluence space key"
     required: false
-    default: 'DEV'
+    default: "DEV"
   confluence-parent-page-id:
-    description: 'Parent page ID for release notes'
+    description: "Parent page ID for release notes"
     required: false
 
   # Slack Integration
   slack-enabled:
-    description: 'Enable Slack notifications'
+    description: "Enable Slack notifications"
     required: false
-    default: 'false'
+    default: "false"
   slack-webhook:
-    description: 'Slack webhook URL'
+    description: "Slack webhook URL"
     required: false
   slack-channel:
-    description: 'Slack channel name'
+    description: "Slack channel name"
     required: false
   slack-icon:
-    description: 'Slack notification icon URL'
+    description: "Slack notification icon URL"
     required: false
   project-name:
-    description: 'Project name for notifications'
+    description: "Project name for notifications"
     required: false
   app-short-name:
-    description: 'Short app name for notifications'
+    description: "Short app name for notifications"
     required: false
 
   # Git Tagging
   create-tag:
-    description: 'Create git tag for release'
+    description: "Create git tag for release"
     required: false
-    default: 'true'
+    default: "true"
   tag-prefix:
-    description: 'Prefix for git tags'
+    description: "Prefix for git tags"
     required: false
-    default: 'v'
+    default: "v"
   tag-suffix:
-    description: 'Suffix for git tags (e.g., -pilot, -beta)'
+    description: "Suffix for git tags (e.g., -pilot, -beta)"
     required: false
 
   # Output Configuration
   output-format:
-    description: 'Output format: markdown, confluence, both'
+    description: "Output format: markdown, confluence, both"
     required: false
-    default: 'both'
+    default: "both"
   include-summary:
-    description: 'Include release summary in output'
+    description: "Include release summary in output"
     required: false
-    default: 'true'
+    default: "true"
 
 outputs:
   release-notes-path:
-    description: 'Path to generated release notes file'
+    description: "Path to generated release notes file"
   confluence-url:
-    description: 'URL to Confluence page (if enabled)'
+    description: "URL to Confluence page (if enabled)"
   tag-name:
-    description: 'Created git tag name'
+    description: "Created git tag name"
   tag-created:
-    description: 'Whether a new tag was created'
+    description: "Whether a new tag was created"
   release-version:
-    description: 'Extracted release version'
+    description: "Extracted release version"
   total-commits:
-    description: 'Total number of commits analyzed'
+    description: "Total number of commits analyzed"
   ticket-count:
-    description: 'Number of unique tickets found'
+    description: "Number of unique tickets found"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Setup Environment
       shell: bash
@@ -151,7 +151,7 @@ runs:
         echo "CREATE_TAG=${{ inputs.create-tag }}" >> $GITHUB_ENV
         echo "TAG_PREFIX=${{ inputs.tag-prefix }}" >> $GITHUB_ENV
         echo "TAG_SUFFIX=${{ inputs.tag-suffix }}" >> $GITHUB_ENV
-        
+
         # Confluence settings
         echo "CONFLUENCE_ENABLED=${{ inputs.confluence-enabled }}" >> $GITHUB_ENV
         echo "CONFLUENCE_BASE_URL=${{ inputs.confluence-base-url }}" >> $GITHUB_ENV
@@ -159,19 +159,20 @@ runs:
         echo "CONFLUENCE_API_TOKEN=${{ inputs.confluence-api-token }}" >> $GITHUB_ENV
         echo "CONFLUENCE_SPACE_KEY=${{ inputs.confluence-space-key }}" >> $GITHUB_ENV
         echo "CONFLUENCE_PARENT_PAGE_ID=${{ inputs.confluence-parent-page-id }}" >> $GITHUB_ENV
-        
-        # Slack settings
+          # Slack settings
         echo "SLACK_ENABLED=${{ inputs.slack-enabled }}" >> $GITHUB_ENV
         echo "SLACK_WEBHOOK=${{ inputs.slack-webhook }}" >> $GITHUB_ENV
         echo "SLACK_CHANNEL=${{ inputs.slack-channel }}" >> $GITHUB_ENV
         echo "SLACK_ICON=${{ inputs.slack-icon }}" >> $GITHUB_ENV
         echo "PROJECT_NAME=${{ inputs.project-name }}" >> $GITHUB_ENV
-        echo "APP_SHORT_NAME=${{ inputs.app-short-name }}" >> $GITHUB_ENV    - name: Extract Version
+        echo "APP_SHORT_NAME=${{ inputs.app-short-name }}" >> $GITHUB_ENV
+
+    - name: Extract Version
       shell: bash
       run: |
         echo "📋 Extracting version from $VERSION_FILE..."
         VERSION=""
-        
+
         if [ -f "$VERSION_FILE" ]; then
           if [[ "$VERSION_FILE" == *.json ]]; then
             # Handle package.json
@@ -198,7 +199,7 @@ runs:
         else
           echo "✅ Extracted version from file: $VERSION"
         fi
-        
+
         echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
         echo "📦 Final version: $VERSION"
 
@@ -206,32 +207,32 @@ runs:
       shell: bash
       run: |
         echo "🔧 Setting up Git configuration..."
-        
+
         # Ensure we're in a git repository
         if ! git rev-parse --git-dir > /dev/null 2>&1; then
           echo "❌ Not in a git repository"
           exit 1
         fi
-        
+
         # Configure git for actions
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git config --global user.email "action@github.com"
         git config --global user.name "GitHub Action"
-        
+
         # Get commit info
         echo "COMMITTER_NAME=$(git log -1 --pretty=%an)" >> $GITHUB_ENV
         echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        
+
         echo "✅ Git configuration completed"
 
     - name: Generate Release Notes
       shell: bash
       run: |
         echo "📝 Generating release notes..."
-        
+
         # Source the release notes generation script
         source ${{ github.action_path }}/scripts/generate-release-notes.sh
-        
+
         # Call the main function
         generate_release_notes
 
@@ -240,10 +241,10 @@ runs:
       shell: bash
       run: |
         echo "🔄 Converting to Confluence format..."
-        
+
         # Source the confluence conversion script
         source ${{ github.action_path }}/scripts/confluence-converter.sh
-        
+
         # Call the conversion function
         convert_to_confluence
 
@@ -252,10 +253,10 @@ runs:
       shell: bash
       run: |
         echo "📤 Uploading to Confluence..."
-        
+
         # Source the confluence upload script
         source ${{ github.action_path }}/scripts/confluence-upload.sh
-        
+
         # Call the upload function
         upload_to_confluence
 
@@ -264,10 +265,10 @@ runs:
       shell: bash
       run: |
         echo "🏷️ Creating git tag..."
-        
+
         # Source the tagging script
         source ${{ github.action_path }}/scripts/create-tag.sh
-        
+
         # Call the tagging function
         create_release_tag
 
@@ -283,9 +284,9 @@ runs:
           🚀 *New ${{ env.PROJECT_NAME }} Release*
           • *Version:* v${{ env.APP_VERSION }} (commit: ${{ env.SHORT_SHA }})
           • *Built by:* ${{ env.COMMITTER_NAME }}
-          
+
           ${{ env.RELEASE_HIGHLIGHTS }}
-          
+
           ${{ env.CONFLUENCE_URL && format('*📖 Release Notes:* {0}', env.CONFLUENCE_URL) || '' }}
         SLACK_TITLE: ${{ env.PROJECT_NAME }} - New Release Available
         SLACK_USERNAME: ${{ env.APP_SHORT_NAME }} Release Bot
@@ -294,19 +295,19 @@ runs:
       shell: bash
       run: |
         echo "📤 Setting action outputs..."
-        
+
         echo "release-notes-path=release-notes/release-notes-v${APP_VERSION}.md" >> $GITHUB_OUTPUT
         echo "release-version=${APP_VERSION}" >> $GITHUB_OUTPUT
         echo "total-commits=${TOTAL_COMMITS_ANALYZED}" >> $GITHUB_OUTPUT
         echo "ticket-count=${TICKET_COUNT}" >> $GITHUB_OUTPUT
-        
+
         if [ -n "$TAG_NAME" ]; then
           echo "tag-name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "tag-created=${TAG_CREATED}" >> $GITHUB_OUTPUT
         fi
-        
+
         if [ -n "$CONFLUENCE_URL" ]; then
           echo "confluence-url=${CONFLUENCE_URL}" >> $GITHUB_OUTPUT
         fi
-        
+
         echo "✅ All outputs set successfully"
